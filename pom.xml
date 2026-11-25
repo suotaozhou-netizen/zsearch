@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.16</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.zst</groupId>
+    <artifactId>zsearch-parent</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>zsearch-parent</name>
+
+    <modules>
+        <module>zsearch-common</module>
+        <module>zsearch-streaming</module>
+        <module>zsearch-server</module>
+    </modules>
+
+    <properties>
+        <java.version>17</java.version>
+        <fastjson2.version>2.0.66</fastjson2.version>
+        <!-- 服务端与 streaming 作业统一使用 ES 7.17.29 客户端 -->
+        <elasticsearch-client.version>7.17.29</elasticsearch-client.version>
+        <flink.version>1.20.1</flink.version>
+        <flink-connector-kafka.version>3.4.0-1.20</flink-connector-kafka.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.zst</groupId>
+                <artifactId>zsearch-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba.fastjson2</groupId>
+                <artifactId>fastjson2</artifactId>
+                <version>${fastjson2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba.fastjson2</groupId>
+                <artifactId>fastjson2-extension-spring6</artifactId>
+                <version>${fastjson2.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>

@@ -1,0 +1,310 @@
+# zSearch 初始索引脚本：单索引 zsearch_article，不使用别名。
+# 读写双方统一使用该索引名：
+#   - zsearch-server：ES_INDEX 默认 zsearch_article
+#   - zsearch-streaming：--es.index 默认 zsearch_article
+# 注意：第 2 步会删除现有 zsearch_article 及其全部数据，确认后再执行。
+# 字段命名：ES 客户端为 SNAKE_CASE；homeUrl/siteId/userId/imageList/videoList 为显式驼峰。
+# score、highlight 为查询期字段，不落库、不建 mapping。
+# dynamic=strict：未在 mapping 中的字段直接报错，防止契约漂移。
+
+### 1. 查看现有索引
+GET http://192.168.88.101:9200/_cat/indices/zsearch_article?v&h=health,status,index,docs.count
+
+### 2. 删除旧索引（会清空数据）
+DELETE http://192.168.88.101:9200/zsearch_article
+
+### 3. 创建索引
+PUT http://192.168.88.101:9200/zsearch_article
+Content-Type: application/json
+
+{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0,
+    "refresh_interval": "1s",
+    "analysis": {
+      "filter": {
+        "synonym_filter": {
+          "type": "synonym",
+          "expand": false,
+          "synonyms": [
+            "深圳,深圳市,鹏城",
+            "男生,男性,男孩,男士"
+          ]
+        }
+      },
+      "tokenizer": {
+        "ngram_tokenizer": {
+          "type": "ngram",
+          "min_gram": 2,
+          "max_gram": 3,
+          "token_chars": ["letter", "digit"]
+        }
+      },
+      "analyzer": {
+        "ik_index": {
+          "type": "custom",
+          "tokenizer": "ik_max_word",
+          "filter": ["synonym_filter"]
+        },
+        "ik_search": {
+          "type": "custom",
+          "tokenizer": "ik_smart",
+          "filter": ["synonym_filter"]
+        },
+        "ngram_analyzer": {
+          "type": "custom",
+          "tokenizer": "ngram_tokenizer"
+        }
+      }
+    }
+  },
+  "mappings": {
+    "dynamic": "strict",
+    "properties": {
+      "id": {
+        "type": "keyword",
+        "ignore_above": 32
+      },
+
+      "title": {
+        "type": "text",
+        "analyzer": "ik_index",
+        "search_analyzer": "ik_search",
+        "fields": {
+          "ngram": {
+            "type": "text",
+            "analyzer": "ngram_analyzer",
+            "search_analyzer": "ngram_analyzer"
+          },
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "text": {
+        "type": "text",
+        "analyzer": "ik_index",
+        "search_analyzer": "ik_search",
+        "fields": {
+          "ngram": {
+            "type": "text",
+            "analyzer": "ngram_analyzer",
+            "search_analyzer": "ngram_analyzer"
+          }
+        }
+      },
+      "summary": {
+        "type": "text",
+        "analyzer": "ik_index",
+        "search_analyzer": "ik_search"
+      },
+      "source": {
+        "type": "keyword",
+        "ignore_above": 128
+      },
+      "url": {
+        "type": "keyword",
+        "index": false,
+        "doc_values": false
+      },
+      "created_at": {
+        "type": "date",
+        "format": "strict_date_optional_time||epoch_millis"
+      },
+      "crawler_time": {
+        "type": "date",
+        "format": "strict_date_optional_time||epoch_millis"
+      },
+      "indexed_at": {
+        "type": "date",
+        "format": "strict_date_optional_time||epoch_millis"
+      },
+
+      "name": {
+        "type": "keyword",
+        "ignore_above": 256
+      },
+      "avatar": {
+        "type": "keyword",
+        "index": false,
+        "doc_values": false
+      },
+      "homeUrl": {
+        "type": "keyword",
+        "index": false,
+        "doc_values": false
+      },
+      "siteId": {
+        "type": "keyword",
+        "ignore_above": 64
+      },
+      "userId": {
+        "type": "keyword",
+        "ignore_above": 64
+      },
+
+      "imageList": {
+        "type": "keyword",
+        "index": false,
+        "doc_values": false
+      },
+      "videoList": {
+        "type": "keyword",
+        "index": false,
+        "doc_values": false
+      },
+
+      "emotion": {
+        "type": "keyword"
+      },
+      "risk_level": {
+        "type": "keyword"
+      },
+      "ocr": {
+        "type": "text",
+        "analyzer": "ik_index",
+        "search_analyzer": "ik_search"
+      },
+      "asr": {
+        "type": "text",
+        "analyzer": "ik_index",
+        "search_analyzer": "ik_search"
+      },
+
+      "repost_count": {
+        "type": "long"
+      },
+      "comment_count": {
+        "type": "long"
+      },
+      "like_count": {
+        "type": "long"
+      },
+      "follower_count": {
+        "type": "long"
+      },
+      "collect_count": {
+        "type": "long"
+      },
+      "interaction_count": {
+        "type": "long"
+      },
+      "text_length": {
+        "type": "integer"
+      },
+
+      "raw_version": {
+        "type": "long"
+      },
+      "pipeline_version": {
+        "type": "integer"
+      },
+      "content_hash": {
+        "type": "keyword",
+        "ignore_above": 64
+      }
+    }
+  }
+}
+
+### 4. 验证 mapping（应无 aliases 输出）
+GET http://192.168.88.101:9200/zsearch_article/_mapping
+
+### 5. 写入一条样例并立即刷新
+PUT http://192.168.88.101:9200/zsearch_article/_doc/test-avatar-001?refresh=true
+Content-Type: application/json
+
+{
+  "id": "test-avatar-001",
+  "title": "某企业发生事故",
+  "text": "现场发生火灾，造成2人死亡，引发投诉和质疑",
+  "summary": "现场发生火灾，造成2人死亡",
+  "name": "测试账号",
+  "avatar": "https://img.example.com/avatar.jpg",
+  "homeUrl": "https://weibo.com/u/1",
+  "siteId": "4",
+  "userId": "u-1",
+  "imageList": ["https://img.example.com/1.jpg"],
+  "videoList": [],
+  "source": "微博",
+  "url": "https://example.com/test-avatar-001",
+  "created_at": "2026-11-18T10:00:00",
+  "crawler_time": "2026-11-18T10:01:00",
+  "indexed_at": "2026-11-18T10:02:00",
+  "emotion": "负面",
+  "risk_level": "重点关注",
+  "repost_count": 10,
+  "comment_count": 20,
+  "like_count": 30,
+  "follower_count": 40,
+  "collect_count": 50,
+  "interaction_count": 150,
+  "text_length": 22,
+  "raw_version": 1763424000000,
+  "pipeline_version": 1,
+  "content_hash": "4f8a2c1d9e7b3a6f5c0d2e8b1a3f6c9d2e5b8a1c"
+}
+
+### 6. 验证检索、头像返回、平台聚合
+POST http://192.168.88.101:9200/zsearch_article/_search
+Content-Type: application/json
+
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "multi_match": {
+            "query": "深圳",
+            "fields": ["title^2.0", "text^1.5", "ocr^1.0", "asr^1.0", "title.ngram^0.5", "text.ngram^0.3"],
+            "minimum_should_match": "100%"
+          }
+        }
+      ],
+      "filter": [
+        {
+          "terms": {
+            "siteId": ["1", "4"]
+          }
+        },
+        {
+          "range": {
+            "created_at": {
+              "gte": "2026-11-01T00:00:00",
+              "lte": "2026-11-18T23:59:59"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "from": 0,
+  "size": 20,
+  "track_total_hits": true,
+  "sort": [
+    {
+      "created_at": {
+        "order": "desc"
+      }
+    }
+  ],
+  "_source": [
+    "id", "title", "summary", "name", "avatar", "siteId", "userId",
+    "source", "url", "homeUrl", "created_at", "emotion", "risk_level",
+    "interaction_count", "text_length", "raw_version", "pipeline_version",
+    "content_hash", "indexed_at"
+  ],
+  "aggs": {
+    "by_site": {
+      "terms": {
+        "field": "siteId",
+        "size": 10
+      }
+    }
+  }
+}
+
+### 7. 清理样例数据（可选）
+DELETE http://192.168.88.101:9200/zsearch_article/_doc/test-avatar-001

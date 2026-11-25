@@ -1,0 +1,73 @@
+server:
+  port: 8888
+
+spring:
+  application:
+    name: zsearch-server
+  profiles:
+    # 真实连接信息放在 application-local.yml（已 gitignore），未显式指定环境时默认加载
+    default: local
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${ZSEARCH_DB_URL:jdbc:mysql://localhost:3306/search?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true&connectTimeout=3000&socketTimeout=30000}
+    username: ${ZSEARCH_DB_USERNAME:root}
+    password: ${ZSEARCH_DB_PASSWORD:}
+    druid:
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      max-wait: 60000
+      validation-query: SELECT 1
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      keep-alive: true
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      web-stat-filter:
+        enabled: true
+      # 本地开发需要查看 SQL 监控时再开启，并务必修改默认账号密码
+      stat-view-servlet:
+        enabled: false
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.zst.zsearch.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+  global-config:
+    banner: false
+    db-config:
+      id-type: auto
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    com.zst.zsearch.mapper: debug
+    # ES 查询 DSL 默认输出；不需要时改为 info
+    com.zst.zsearch.es: debug
+
+zsearch:
+  auth:
+    # 生产环境必须通过环境变量覆盖；长度至少 32 字节
+    jwt-secret: ${ZSEARCH_JWT_SECRET:zsearch-local-dev-secret-key-please-change-2026}
+    token-ttl-minutes: 30
+  elasticsearch:
+    uris: ${ZSEARCH_ES_URIS:http://localhost:9200}
+    username:
+    password:
+    # 单索引直连，不使用别名；重建时按 ARCHITECTURE.md §8.2 停写、重建、回放
+    index-name: zsearch_article
+    connect-timeout-ms: 3000
+    socket-timeout-ms: 30000

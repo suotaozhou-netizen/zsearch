@@ -1,0 +1,123 @@
+### 1. 即时搜索：全文 + 最近 7 天 + 情感/风险过滤
+POST http://localhost:8080/api/search/articles/_search
+Content-Type: application/json
+
+{
+  "keywords": "深圳+(男生|男性)",
+  "excludeKeywords": "招聘|广告",
+  "nearSlop": 7,
+  "searchScope": "FULL_TEXT",
+  "timeRange": "LAST_7_DAYS",
+  "sources": ["微博", "新闻"],
+  "emotions": ["负面"],
+  "riskLevels": ["关注风险", "重点关注"],
+  "page": 1,
+  "size": 20,
+  "sortBy": "created_at",
+  "sortOrder": "desc",
+  "highlight": true
+}
+
+### 2. 即时搜索：按标题搜索 + 自定义时间
+POST http://localhost:8080/api/search/articles/_search
+Content-Type: application/json
+
+{
+  "keywords": "深圳*男生",
+  "searchScope": "TITLE",
+  "timeRange": "CUSTOM",
+  "startTime": "2026-11-01",
+  "endTime": "2026-11-15",
+  "page": 1,
+  "size": 20,
+  "sortBy": "_score",
+  "sortOrder": "desc"
+}
+
+### 3. 创建监测分组
+POST http://localhost:8080/api/monitor/groups
+Content-Type: application/json
+
+{
+  "name": "东莞企业"
+}
+
+### 4. 监测分组列表
+GET http://localhost:8080/api/monitor/groups?keyword=东莞&page=1&size=20
+
+### 5. 监测分组详情
+GET http://localhost:8080/api/monitor/groups/1
+
+### 6. 更新监测分组
+PUT http://localhost:8080/api/monitor/groups/1
+Content-Type: application/json
+
+{
+  "name": "东莞重点企业"
+}
+
+### 7. 删除监测分组
+DELETE http://localhost:8080/api/monitor/groups/1
+
+### 8. 创建监测设置
+POST http://localhost:8080/api/monitor/settings
+Content-Type: application/json
+
+{
+  "groupId": 1,
+  "monitorType": 1,
+  "name": "深圳男生舆情",
+  "keywords": "深圳+(男生|男性)",
+  "excludeKeywords": "招聘|广告",
+  "config": {}
+}
+
+### 8.1 创建信息源监测设置（抖音 + 微博）
+POST http://localhost:8080/api/monitor/settings
+Content-Type: application/json
+
+{
+  "groupId": 1,
+  "monitorType": 2,
+  "name": "双平台信息源监测",
+  "config": {
+    "siteIds": [1, 4]
+  }
+}
+
+### 9. 监测设置列表（可按类型过滤）
+GET http://localhost:8080/api/monitor/settings?groupId=1&monitorType=2&keyword=信息源&page=1&size=20
+
+### 10. 监测设置详情
+GET http://localhost:8080/api/monitor/settings/1
+
+### 11. 更新监测设置
+PUT http://localhost:8080/api/monitor/settings/1
+Content-Type: application/json
+
+{
+  "groupId": 1,
+  "monitorType": 1,
+  "name": "深圳男生舆情",
+  "keywords": "深圳+(男生|男性)",
+  "excludeKeywords": "招聘|广告|中介",
+  "config": {}
+}
+
+### 12. 执行监测设置：最近 24 小时 + 负面信息
+POST http://localhost:8080/api/monitor/settings/1/_search
+Content-Type: application/json
+
+{
+  "timeRange": "LAST_24_HOURS",
+  "emotions": ["负面"],
+  "riskLevels": ["关注风险", "重点关注"],
+  "page": 1,
+  "size": 20,
+  "sortBy": "created_at",
+  "sortOrder": "desc",
+  "highlight": true
+}
+
+### 13. 删除监测设置
+DELETE http://localhost:8080/api/monitor/settings/1
